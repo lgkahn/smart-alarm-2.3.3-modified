@@ -40,7 +40,7 @@
 import groovy.json.JsonSlurper
 
 definition(
-    name: "Smart Alarm lgk modified",
+    name: "Smart Alarm lgk Modified",
     namespace: "lgkapps",
     author: "geko@statusbits.com",
     description: '''A multi-zone virtual alarm panel, featuring customizable\
@@ -515,7 +515,7 @@ def pageArmingOptions() {
     def inputDelay = [
         name:       "delay",
         type:       "enum",
-        metadata:   [values:["30","45","60","90"]],
+        metadata:   [values:["10","20","30","45","60","90"]],
         title:      "Delay (in seconds)",
         defaultValue: "30",
         required:   true
@@ -599,16 +599,38 @@ def pageAlarmOptions() {
    def colorsWithDisabled=["Disabled","Blue","Purple","Red","Pink","Orange","Yellow","Green","White"]
   
   
-def inputHueColor = [
-        name:           "hueColor",
+def inputWaterHueColor = [
+        name:           "WaterHueColor",
         type:           "enum",
-        title:          "Hue Alert Color?",
+        title:          "Hue Color for Water Leak Alert?",
+        options:      	 colorsWithDisabled,
+        required:       false,
+        defaultValue: 	"Disabled",
+        multiple: 		false
+    ]
+    
+    
+def inputSmokeHueColor = [
+        name:           "SmokeHueColor",
+        type:           "enum",
+        title:          "Hue Color for Smoke/CO2 Alert?",
+        options:      	 colorsWithDisabled,
+        required:       false,
+        defaultValue: 	"Disabled",
+        multiple: 		false
+    ]
+     
+def inputIntrusionHueColor = [
+        name:           "IntrusionHueColor",
+        type:           "enum",
+        title:          "Hue Alert Color for Intrusion/Other Alert?",
         options:      	 colorsWithDisabled,
         required:       false,
         defaultValue: 	"Disabled",
         multiple: 		false
     ]
 
+   
 	def inputHueBrightness = [
   	 name: "hueBrightnessLevel", 
   	 type: "number", 
@@ -651,9 +673,11 @@ def inputHueColor = [
         section("Switches") {
             input inputSwitches
         }
-        section("hues") {
+        section("Hues") {
         	input inputHues
-            input inputHueColor
+            input inputWaterHueColor
+            input inputSmokeHueColor
+            input inputIntrusionHueColor
             input inputHueBrightness
             }
         section("Cameras") {
@@ -674,7 +698,18 @@ def pageNotifications() {
         "disarmed or when an alarm is set off. Notifications can be send " +
         "using either Push messages, SMS (text) messages and Pushbullet " +
         "messaging service. Smart Alarm can also notify you with sounds or " +
-        "voice alerts using compatible audio devices, such as Sonos."
+        "voice alerts using compatible audio devices, such as Sonos." +
+        "You can also input the notification device if you are using the special smart alarm" +
+        "Notification device type/driver."
+
+
+    def inputNotificationDevice = [
+        name:       "notificationDevice",
+        type:       "capability.notification",
+        title:      "Which smart alarm notification device type?",
+        multiple:   false,
+        required:   false
+    ]
 
     def inputPushAlarm = [
         name:           "pushMessage",
@@ -857,6 +892,11 @@ def pageNotifications() {
         section("Notification Options") {
             paragraph helpAbout
         }
+        section("Notifcation Device")
+         {
+          input inputNotificationDevice
+          }
+          
         section("Push Notifications") {
             input inputPushAlarm
             input inputPushStatus
@@ -1097,6 +1137,7 @@ private def setupInit() {
         state.zones = []
         state.alarms = []
         state.history = []
+        state.alertType = "None"
     } else {
         def version = state.version as String
         if (version == null || version.startsWith('1')) {
@@ -1134,6 +1175,7 @@ private def initialize() {
     subscribe(location, onLocation)
 
     STATE()
+    reportStatus()
 }
 
 private def clearAlarm() {
@@ -1154,6 +1196,7 @@ private def clearAlarm() {
         }
         state.offSwitches = []
     }
+    reportStatus()
 }
 
 
@@ -1175,6 +1218,7 @@ private def clearAlarmFull() {
         }
         state.offSwitches = []
     }
+    reportStatus()
 }
 private def initZones() {
     LOG("initZones()")
@@ -1331,18 +1375,19 @@ private def onZoneEvent(evt, sensorType) {
     def zone = getZoneForDevice(evt.deviceId, sensorType)
     if (!zone) {
         log.warn "Cannot find zone for device ${evt.deviceId}"
+        state.alertType = "None"
         return
     }
-
+    
     if (zone.armed) {
+    state.alertType = sensorType
         state.alarms << evt.displayName
-        if (zone.zoneType == "alert" || !zone.delay || (state.stay && settings.stayDelayOff)) {
-            activateAlarm()
+        if (zone.zoneType == "alert" || !zone.delay || (state.stay && settings.stayDelayOff)) 
+				activateAlarm()
         } else {
             myRunIn(state.delay, activateAlarm)
         }
     }
-}
 
 def onLocation(evt) {
     LOG("onLocation(${evt.value})")
@@ -1386,6 +1431,7 @@ def armAway() {
     if (!atomicState.armed || atomicState.stay) {
         armPanel(false)
     }
+    reportStatus()
 }
 
 def armStay() {
@@ -1394,6 +1440,7 @@ def armStay() {
     if (!atomicState.armed || !atomicState.stay) {
         armPanel(true)
     }
+    reportStatus()
 }
 
 def disarm() {
@@ -1409,6 +1456,7 @@ def disarm() {
 
         reset()
     }
+    reportStatus()
 }
 
 def panic() {
@@ -1435,6 +1483,7 @@ def reset() {
 
     notify(msg)
     notifyVoice()
+    reportStatus()
 }
 
 def exitDelayExpired() {
@@ -1462,6 +1511,7 @@ def exitDelayExpired() {
     msg += "zones are armed."
 
     notify(msg)
+    reportStatus()
 }
 
 private def armPanel(stay) {
@@ -1600,6 +1650,7 @@ def activateAlarm() {
     LOG("activateAlarm()")
 
     if (state.alarms.size() == 0) {
+    log.debug "in activate .. no alarm!"
         log.warn "activateAlarm: false alarm"
         return
     }
@@ -1645,8 +1696,9 @@ def activateAlarm() {
     history(msg)
     notify(msg)
     notifyVoice()
+    reportStatus()
 
-    myRunIn(180, reset)
+    myRunIn(300, reset)
 }
 
 private def notify(msg) {
@@ -1757,6 +1809,63 @@ private def history(String event, String description = "") {
     LOG("history: ${history}")
     state.history = history
 }
+
+def reportStatus()
+{
+log.debug "in report status"
+log.debug "notification device = $notificationDevice"
+// def switchesOn = settings.switches?.findAll { it?.currentSwitch == "off" }
+
+//def deviceDisplayName = notifcationDevice.displayName
+//log.debug "disp name = $deviceDisplayName"
+//if (settings.notifcationDevice != null)
+//{
+log.debug "not null"
+def phrase = ""
+if (state.alarms.size())
+ {
+        phrase = "Alert: Alarm at ${location.name}!"
+        notificationDevice.deviceNotification(phrase)
+        log.debug "sending notification alert: = $phrase"
+        def zones = "Zones: "
+        state.alarms.each()
+           {
+           //log.debug "in loop it"
+           //log.debug "it = $it"
+            zones = "Zones: "
+            zones += " $it" +"\n"
+            }
+            notificationDevice.deviceNotification(zones)
+        	log.debug "sending nofication zones = $zones" 
+            
+            // send zone type
+            phrase = "AlertType: "
+           def atype = state.alertType
+           if (atype == null)
+             atype = "None"
+           phrase += " $atype"
+             notificationDevice.deviceNotification(phrase)
+        	log.debug "sending nofication alert type = $phrase" 
+            
+            
+          }
+   else
+   {
+        phrase = "Status: "
+        if (state.armed)
+          {
+            def mode = state.stay ? "Armed - Stay" : "Armed - Away"
+            phrase += "${mode}"
+        } else {
+            phrase += "Disarmed"
+        }
+        log.debug "sending notification status = $phrase"
+	notificationDevice.deviceNotification(phrase)
+  
+    
+   
+   } 
+    }
 
 private def getStatusPhrase() {
     LOG("getStatusPhrase()")
@@ -1933,6 +2042,8 @@ def sendColor() {
 	//Initialize the hue and saturation
 	def hueColor = 0
 	def saturation = 100
+    def atype = state.alertType
+    
 
 	//Use the user specified brightness level. If they exceeded the min or max values, overwrite the brightness with the actual min/max
 	if (settings.hueBrightnessLevel == null)
@@ -1944,10 +2055,23 @@ def sendColor() {
 		settings.hueBrightnessLevel=100
 	}
     
-    if (settings.hueColor == null)
-    	settings.hueColor = "Disabled"
-        
-    def color = settings.hueColor
+    if (settings.WaterHueColor == null)
+    	settings.WaterHueColor = "Disabled"
+    if (settings.SmokeHueColor == null)
+    	settings.SmokeHueColor = "Disabled"
+    if (settings.IntrusionHueColor == null)
+    	settings.IntrusionHueColor = "Disabled"
+      
+      log.debug "in notify atype = $atype"
+      
+	def color
+    if (atype == "smoke")
+      color = settings.SmokeHueColor
+    if (atype == "water")
+       color = settings.WaterHueColor
+    else atype = settings.IntrusionHueColor
+    
+    
 	log.debug "in notify by color color = $color"
     
 	//Set the hue and saturation for the specified color.
