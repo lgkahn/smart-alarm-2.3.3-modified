@@ -713,6 +713,15 @@ def pageNotifications() {
         required:   false
     ]
 
+    def haveNotificationDevice = [
+        name:       "haveNotificationDevice",
+        type:       "bool",
+        title:      "Use Notification Device? (to get around error in IDE in not being able to check for device existance!",
+        defaultValue: false,
+        required:   true
+    ]
+     
+     
    def inputSirenOnWaterAlert = [
         name:       "sirenOnWaterAlert",
         type:       "bool",
@@ -720,7 +729,7 @@ def pageNotifications() {
         defaultValue: true,
         required:   true
     ]
-     
+    
    def inputSirenOnSmokeAlert = [
         name:       "sirenOnSmokeAlert",
         type:       "bool",
@@ -921,6 +930,7 @@ def pageNotifications() {
         section("Notification Device")
          {
           input inputNotificationDevice
+          input haveNotificationDevice
           }
           
           
@@ -1239,8 +1249,11 @@ private def clearAlarmFull() {
 
     state.alarms = []
     settings.alarms*.off()
-    //hues = settings.hues
-	hues.off()
+    if (settings.hues)
+    {
+        def hues = settings.hues
+        hues.off()
+    }
     // Turn off only those switches that we've turned on
     def switchesOff = state.offSwitches
     if (switchesOff) {
@@ -1935,13 +1948,10 @@ private def history(String event, String description = "") {
 def reportStatus()
 {
 log.debug "in report status"
+if (settings.haveNotificationDevice)
+{
 log.debug "notification device = $notificationDevice"
-// def switchesOn = settings.switches?.findAll { it?.currentSwitch == "off" }
 
-//def deviceDisplayName = notifcationDevice.displayName
-//log.debug "disp name = $deviceDisplayName"
-//if (settings.notifcationDevice != null)
-//{
 log.debug "not null"
 def phrase = ""
 if (state.alarms.size())
@@ -1982,8 +1992,8 @@ if (state.alarms.size())
             phrase += "Disarmed"
         }
         log.debug "sending notification status = $phrase"
-	notificationDevice.deviceNotification(phrase)
-  
+		notificationDevice.deviceNotification(phrase)
+  }
    } 
     }
 
