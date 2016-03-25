@@ -7,14 +7,16 @@
  *  Please visit <http://statusbits.github.io/smartalarm/> for more
  *  information.
  *
- *  Version 2.4.3 modified by lgk (3/21/2016)
+ *  Version 2.4.3 modified by lgk (3/24/2016)
  
  * modified by lgkahn to add hue color alerts,
  * also finished implementation of the history status page in the smart app, so we can see event histories. (implementation was incomplete for this in the original released version)
  * alarm is cleared after 3 minutes.. i didnt want to change that as i am not sure making it longer will cause a timeout in smartthimgs
  * I had the hue in clearalarm and it was resetting after the 3 minutes. but I dont want that.. I want the light on till I turn it
  * off to show there was an alarm, So I changed this behavior.. It only fully clears when initizing the smart app.
- *
+ * Also, added boolean option to select wheter siren is used for water, intrusion or smoker alert.
+ * Also added notification to dashboard device type.
+ * Also added multiple color options for differing Alert types.
  *
  *  The latest version of this file can be found on GitHub at:
  *  <https://github.com/statusbits/smartalarm/blob/master/SmartAlarm.groovy>
@@ -711,6 +713,30 @@ def pageNotifications() {
         required:   false
     ]
 
+   def inputSirenOnWaterAlert = [
+        name:       "sirenOnWaterAlert",
+        type:       "bool",
+        title:      "Use Siren for Water Leak?",
+        defaultValue: true,
+        required:   true
+    ]
+     
+   def inputSirenOnSmokeAlert = [
+        name:       "sirenOnSmokeAlert",
+        type:       "bool",
+        title:      "Use Siren for Smoke Alert?",
+        defaultValue: true,
+        required:   true
+    ]
+    
+   def inputSirenOnIntrusionAlert = [
+        name:       "sirenOnIntrusionAlert",
+        type:       "bool",
+        title:      "Use Siren for Intrusion Alert?",
+        defaultValue: true,
+        required:   true
+    ]
+
     def inputPushAlarm = [
         name:           "pushMessage",
         type:           "bool",
@@ -892,9 +918,17 @@ def pageNotifications() {
         section("Notification Options") {
             paragraph helpAbout
         }
-        section("Notifcation Device")
+        section("Notification Device")
          {
           input inputNotificationDevice
+          }
+          
+          
+          section("Siren Notifcations")
+         {
+          input inputSirenOnWaterAlert
+          input inputSirenOnSmokeAlert
+          input inputSirenOnIntrusionAlert
           }
           
         section("Push Notifications") {
@@ -1382,13 +1416,42 @@ private def onZoneEvent(evt, sensorType) {
     if (zone.armed) {
     state.alertType = sensorType
         state.alarms << evt.displayName
-        if (zone.zoneType == "alert" || !zone.delay || (state.stay && settings.stayDelayOff)) 
-				activateAlarm()
-        } else {
+        // lgk new code to check zone delay and if set dont go right to active but call post active to see if still armed
+        
+        if (zone.delay && (zone.zoneType != "bypass") && !(state.stay && settings.stayDelayOff))
+         {
+         log.debug "Alarm delaying..."
+         myRunIn(state.delay,postActivateCheck)
+         }
+         
+        else if (zone.zoneType == "alert" || !zone.delay || (state.stay && settings.stayDelayOff)) 
+			{
+            activateAlarm()
+          }
+        else {
             myRunIn(state.delay, activateAlarm)
         }
     }
+ }
 
+def postActivateCheck()
+{
+ def cstatus = getAlarmStatus()
+ log.debug "Post Delay. Current Alarm Status = $cstatus!"
+ 
+ if (cstatus == "DISARMED")
+  {
+    log.debug "Delay expired Alarm is Disarmed so Ignore Alert!"
+    return
+  }
+  else
+  {
+   log.debug "Delay expired ... System is still Armed - Activate Alarm!"
+   def atype = state.alertType
+   activateAlarmPostDelay(atype)
+  }
+ }
+ 
 def onLocation(evt) {
     LOG("onLocation(${evt.value})")
 
@@ -1646,16 +1709,18 @@ def apiStatus() {
     return status
 }
 
-def activateAlarm() {
-    LOG("activateAlarm()")
-
-    if (state.alarms.size() == 0) {
-    log.debug "in activate .. no alarm!"
-        log.warn "activateAlarm: false alarm"
-        return
-    }
-
-    switch (settings.sirenMode) {
+def activateSirenAfterCheck(String atype)
+{
+ log.debug "in siren alert type = $atype"
+ log.debug "siren for water = $settings.sirenOnWaterAlert"
+ log.debug "siren for smoke = $settings.sirenOnSmokeAlert"
+ log.debug "siren for intrusion (contact,motion,acceleration) = $settings.sirenOnIntrusionAlert"
+ 
+ if ((atype == "Water" && settings.sirenOnWaterAlert) ||
+     (atype == "Smoke" && settings.sirenOnSmokeAlert) ||
+     ((atype == "contact" || atype == "acceleration" || atype == "motion") && settings.sirenOnIntrusionAlert))
+  {
+  switch (settings.sirenMode) {
     case "Siren":
         settings.alarms*.siren()
         break
@@ -1668,7 +1733,24 @@ def activateAlarm() {
         settings.alarms*.both()
         break
     }
+ }
+  else
+  { 
+    log.debug "No siren for $atype Alert"
+  }
+  }
+  
+def activateAlarmPostDelay(String lastAlertType)
+{
+// no alarm check here as if door opens only for second with delay and system is not disarmed
+// we still want alarm even if door is closed after delay.. Basically like real alarm the delay is only
+// to disarm the system. Otherwise someone can open door come it, quickly close and there is not alarm LGK.
 
+// issue here is that after delay we could have lost the alert type so pass it in
+ log.debug "activate alarm post delay check - alert type = $lastAlertType"
+ 
+ activateSirenAfterCheck(lastAlertType)
+ 
     // Only turn on those switches that are currently off
     def switchesOn = settings.switches?.findAll { it?.currentSwitch == "off" }
     LOG("switchesOn: ${switchesOn}")
@@ -1679,8 +1761,7 @@ def activateAlarm() {
 
   /* turn on and set color to hues */
   sendColor()
-
-    settings.cameras*.take()
+  settings.cameras*.take()
 
     if (settings.helloHomeAction) {
         log.info "Executing HelloHome action '${settings.helloHomeAction}'"
@@ -1697,7 +1778,48 @@ def activateAlarm() {
     notify(msg)
     notifyVoice()
     reportStatus()
+    myRunIn(300, reset)
+}
 
+def activateAlarm() {
+    LOG("activateAlarm()")
+
+    if (state.alarms.size() == 0) {
+        log.debug "in activate .. no alarm!"
+        log.warn "activateAlarm: false alarm"
+        return
+    }
+
+	 def atype = state.alertType
+     activateSirenAfterCheck(atype)
+    
+    // Only turn on those switches that are currently off
+    def switchesOn = settings.switches?.findAll { it?.currentSwitch == "off" }
+    LOG("switchesOn: ${switchesOn}")
+    if (switchesOn) {
+        switchesOn*.on()
+        state.offSwitches = switchesOn.collect { it.id }
+    }
+
+  /* turn on and set color to hues */
+  sendColor()
+  settings.cameras*.take()
+
+    if (settings.helloHomeAction) {
+        log.info "Executing HelloHome action '${settings.helloHomeAction}'"
+        location.helloHome.execute(settings.helloHomeAction)
+    }
+
+    def msg = "Alarm at ${location.name}!"
+    state.alarms.each() {
+        msg += "\n${it}"
+  
+    }
+
+    history(msg)
+    notify(msg)
+    notifyVoice()
+    reportStatus()
     myRunIn(300, reset)
 }
 
@@ -1862,8 +1984,6 @@ if (state.alarms.size())
         log.debug "sending notification status = $phrase"
 	notificationDevice.deviceNotification(phrase)
   
-    
-   
    } 
     }
 
@@ -2069,7 +2189,7 @@ def sendColor() {
       color = settings.SmokeHueColor
     if (atype == "water")
        color = settings.WaterHueColor
-    else atype = settings.IntrusionHueColor
+    else color = settings.IntrusionHueColor
     
     
 	log.debug "in notify by color color = $color"
