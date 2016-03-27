@@ -32,10 +32,10 @@ metadata {
   tiles (scale: 2){
    multiAttributeTile(name:"status", type: "generic", width: 6, height: 4){
  tileAttribute ("device.status", key: "PRIMARY_CONTROL") {
- attributeState "All Ok", label:"All Ok", action:"", icon:"", backgroundColor:"#4f9558"
- attributeState "Water Alert", label:"Water Alert", action:"", icon:"", backgroundColor:"#007f8f"
- attributeState "Smoke/CO2 Alert", label:"Smoke/CO2 Alert", action:"", icon:"", backgroundColor:"#711100"
- attributeState "Intrusion Alert", label:"Intrusion Alert", icon:"", backgroundColor:"#8a0707"
+ attributeState "All Ok", label:"All Ok", icon:"st.Home.home3", backgroundColor:"#4f9558"
+ attributeState "Water Alert", label:"Water Alert", action:"offPhysical", icon:"st.alarm.water.wet", backgroundColor:"#007f8f"
+ attributeState "Smoke/CO2 Alert", label:"Smoke/CO2 Alert", action:"offPhysical", icon:"st.alarm.smoke.smoke", backgroundColor:"#711100"
+ attributeState "Intrusion Alert", label:"Intrusion Alert", action: "offPhysical", icon:"st.alarm.alarm.alarm", backgroundColor:"#8a0707"
  }
 
 tileAttribute("device.armStatus", key: "SECONDARY_CONTROL") {
@@ -58,29 +58,29 @@ tileAttribute("device.armStatus", key: "SECONDARY_CONTROL") {
             state "lite", label: 'Disarmed', backgroundColor: "#4f9558"
 	}	
       valueTile("armStay", "device.armStay",  width: 2, height: 2) {
-			state "unlite", label:'Armed Stay',icon:"",backgroundColor: "#ffffff"
+			state "unlite", label:'Armed Stay',backgroundColor: "#ffffff"
             state "lite", label:'Armed Stay',backgroundColor: "#4f9558"
 	}	
       valueTile("armAway", "device.armAway",  width: 2, height: 2) {
-			state "unlite", label:'Armed Away',icon:"",backgroundColor: "#ffffff"
+			state "unlite", label:'Armed Away',backgroundColor: "#ffffff"
             state "lite", label:'Armed Away',backgroundColor: "#4f9558"
 	}	
     
     
     valueTile("armStatus", "device.armStatus", inactiveLabel: false, width: 4, height: 1) {
-			state "default", label:'Arming Status: ${currentValue}',icon:""
+			state "default", label:'Arming Status: ${currentValue}'
 	}		
     valueTile("lastAlert", "device.lastAlert", inactiveLabel: false, width: 4, height: 1) {
-			state "default", label:'Last Alert: ${currentValue}',icon:""
+			state "default", label:'Last Alert: ${currentValue}'
             }
     valueTile("lastAlertType", "device.lastAlertType", inactiveLabel: false, width: 4, height: 1) {
-			state "default", label:'Last Type: ${currentValue}',icon:""
+			state "default", label:'Last Type: ${currentValue}'
 		
     }
  
 		valueTile("dismissSwitch", "device.switch", width: 2, height: 2, canChangeIcon: true) { 
- 			state "off", label: '', action: "", icon: "", backgroundColor: "#ffffff" 
- 			state "on", label: 'Dismiss\nAlert', action: "switch.off", icon: "", backgroundColor: "#8a0707" 
+ 			state "off", label: '', action: "", backgroundColor: "#ffffff" 
+ 			state "on", label: 'Dismiss\nAlert', action: "switch.off", icon: "st.alarm.alarm.alarm", backgroundColor: "#8a0707" 
  		}  		
 
 }
@@ -120,12 +120,12 @@ if (parts.length == 2)
 
   def command = parts[0]
   def value = parts[1]
-  log.debug "command = $command value = *$value*"
+  log.debug "command = *$command* value = *$value*"
 
 switch (command)
 {
     case "Status":
-    log.debug "thestatus = *$value*"
+    log.debug "got status thestatus = *$value*"
     sendEvent(name: "armStatus", value: value)
     
     switch (value)
@@ -152,6 +152,7 @@ switch (command)
     
     sendEvent(name: "status" , value: "All Ok")
     sendEvent(name:"statusText", value: value) 
+    break;
 
     case "Alert":
         log.debug "got Alert message value = $value"
@@ -216,6 +217,7 @@ def on() {
  
  
  def off() { 
+ log.debug "in off"
  	sendEvent(name: "switch", value: "off") 
  } 
 
@@ -225,6 +227,8 @@ def onPhysical() {
 }
 
 def offPhysical() {
+log.debug " in off physical"
 	sendEvent(name: "switch", value: "off", type: "physical")
 }
+
 
