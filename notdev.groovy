@@ -32,10 +32,10 @@ metadata {
   tiles (scale: 2){
    multiAttributeTile(name:"status", type: "generic", width: 6, height: 4){
  tileAttribute ("device.status", key: "PRIMARY_CONTROL") {
- attributeState "All Ok", label:"All Ok", icon:"st.Home.home3", backgroundColor:"#4f9558"
- attributeState "Water Alert", label:"Water Alert", action:"offPhysical", icon:"st.alarm.water.wet", backgroundColor:"#007f8f"
- attributeState "Smoke/CO2 Alert", label:"Smoke/CO2 Alert", action:"offPhysical", icon:"st.alarm.smoke.smoke", backgroundColor:"#711100"
- attributeState "Intrusion Alert", label:"Intrusion Alert", action: "offPhysical", icon:"st.alarm.alarm.alarm", backgroundColor:"#8a0707"
+ attributeState "All Ok", label:'${name}', icon:"st.Home.home3", backgroundColor:"#4f9558"
+ attributeState "Water Alert", label:'${name}', action:"offPhysical", icon:"st.alarm.water.wet", backgroundColor:"#007f8f"
+ attributeState "Smoke/CO2 Alert", label:'${name}', action:"offPhysical", icon:"st.alarm.smoke.smoke", backgroundColor:"#711100"
+ attributeState "Intrusion Alert", label:'${name}', action: "offPhysical", icon:"st.alarm.alarm.alarm", backgroundColor:"#8a0707"
  }
 
 tileAttribute("device.armStatus", key: "SECONDARY_CONTROL") {
