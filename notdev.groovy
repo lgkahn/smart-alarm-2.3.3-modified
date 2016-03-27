@@ -131,18 +131,21 @@ switch (command)
     switch (value)
     {
     case " Disarmed":
+    	log.debug "Setting disarm tile"
         sendEvent(name: "armDisarm", value: "lite")
         sendEvent(name: "armStay", value: "unlite")
         sendEvent(name: "armAway", value: "unlite")
         break;
 
     case " Armed - Away":
+    	log.debug "setting arm away tile"
         sendEvent(name: "armDisarm", value: "unlite")
         sendEvent(name: "armStay", value: "unlite")
         sendEvent(name: "armAway", value: "lite")
         break;
 
     case " Armed - Stay":
+    	log.debug "setting arm stay tile"
         sendEvent(name: "armDisarm", value: "unlite")
         sendEvent(name: "armStay", value: "lite")
         sendEvent(name: "armAway", value: "unlite")
