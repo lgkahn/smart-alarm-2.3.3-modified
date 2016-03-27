@@ -47,10 +47,10 @@ tileAttribute("device.armStatus", key: "SECONDARY_CONTROL") {
    */
    
    valueTile("status","device.status", width: 6, height: 4){  
-        state "All Ok", label:'${name}', backgroundColor:"#4f9558"
-        state "Water Alert", label:'${name}', backgroundColor:"#007f8f"
-        state "Smoke/CO2 Alert", label:'${name}', backgroundColor:"#711100"
-        state "Intrusion Alert", label:'${name}', backgroundColor:"#8a0707"
+        state "All Ok", label:'${name}', icon:"st.Home.home3", backgroundColor:"#4f9558"
+        state "Water Alert", label:'${name}', icon:"st.alarm.water.wet", backgroundColor:"#007f8f"
+        state "Smoke/CO2 Alert", label:'${name}', icon:"st.alarm.smoke.smoke", backgroundColor:"#711100"
+        state "Intrusion Alert", label:'${name}', icon:"st.alarm.alarm.alarm", backgroundColor:"#8a0707"
       }
       
    
