@@ -79,13 +79,13 @@ tileAttribute("device.armStatus", key: "SECONDARY_CONTROL") {
     }
  
 		valueTile("dismissSwitch", "device.switch", width: 2, height: 2, canChangeIcon: true) { 
- 			state "off", label: '', action: "", backgroundColor: "#ffffff" 
+ 			state "off", label: '', action: "", icon: '', backgroundColor: "#ffffff" 
  			state "on", label: 'Dismiss\nAlert', action: "switch.off", icon: "st.alarm.alarm.alarm", backgroundColor: "#8a0707" 
  		}  		
 
 }
     main (["status"])
-    details(["status","armDisarm","armStay","armAway","lastAlert","lastAlertType","dismissSwitch"])
+    details(["status","armDisarm","armStay","armAway","armStatus","lastAlert","lastAlertType","dismissSwitch"])
 }
 
 
