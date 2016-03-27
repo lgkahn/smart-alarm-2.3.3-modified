@@ -30,14 +30,28 @@ metadata {
   }
 
   tiles (scale: 2){
-    valueTile("status","device.status", width: 6, height: 4){  
+   multiAttributeTile(name:"status", type: "generic", width: 6, height: 4){
+ tileAttribute ("device.status", key: "PRIMARY_CONTROL") {
+ attributeState "All Ok", label:"All Ok", action:"", icon:"", backgroundColor:"#4f9558"
+ attributeState "Water Alert", label:"Water Alert", action:"", icon:"", backgroundColor:"#007f8f"
+ attributeState "Smoke/CO2 Alert", label:"Smoke/CO2 Alert", action:"", icon:"", backgroundColor:"#711100"
+ attributeState "Intrusion Alert", label:"Intrusion Alert", icon:"", backgroundColor:"#8a0707"
+ }
+
+tileAttribute("device.armStatus", key: "SECONDARY_CONTROL") {
+ attributeState("default", label:'${currentValue}', unit:"")
+ }
+}
+   
+   
+   /*valueTile("status","device.status", width: 6, height: 4){  
         state "All Ok", label:'${name}', backgroundColor:"#4f9558"
         state "Water Alert", label:'${name}', backgroundColor:"#007f8f"
         state "Smoke/CO2 Alert", label:'${name}', backgroundColor:"#711100"
         state "Intrusion Alert", label:'${name}', backgroundColor:"#8a0707"
       }
       
-      
+    */  
     
      valueTile("armDisarm", "device.armDisarm", width: 2, height: 2) {
 			state "unlite", label: 'Disarmed', backgroundColor: "#ffffff"
