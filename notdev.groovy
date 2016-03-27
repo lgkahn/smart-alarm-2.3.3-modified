@@ -85,7 +85,7 @@ tileAttribute("device.armStatus", key: "SECONDARY_CONTROL") {
 
 }
     main (["status"])
-    details(["status","armDisarm","armStay","armAway","armStatus","lastAlert","lastAlertType","dismissSwitch"])
+    details(["status","armDisarm","armStay","armAway","lastAlert","lastAlertType","dismissSwitch"])
 }
 
 
