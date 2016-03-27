@@ -1218,10 +1218,20 @@ private def initialize() {
     initRestApi()
     subscribe(location, onLocation)
 
+  if (settings.haveNotificationDevice)
+	{
+   	 subscribe(notificationDevice, "switch.off", gotDismissMessage)
+	}
     STATE()
     reportStatus()
 }
 
+def gotDismissMessage(evt)
+{
+ log.debug "Got the dismiss message from the notification device.. clearing alarm!"
+ clearAlarmFull()
+ }
+ 
 private def clearAlarm() {
     LOG("clearAlarm()")
 
@@ -1246,6 +1256,7 @@ private def clearAlarm() {
 
 private def clearAlarmFull() {
     LOG("clearAlarm()")
+    log.debug "Clearing Alarm!"
 
     state.alarms = []
     settings.alarms*.off()
@@ -1975,7 +1986,7 @@ if (state.alarms.size())
            def atype = state.alertType
            if (atype == null)
              atype = "None"
-           phrase += " $atype"
+           phrase += "$atype"
              notificationDevice.deviceNotification(phrase)
         	log.debug "sending nofication alert type = $phrase" 
             
