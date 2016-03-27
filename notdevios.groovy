@@ -48,12 +48,11 @@ tileAttribute("device.armStatus", key: "SECONDARY_CONTROL") {
    
    valueTile("status","device.status", width: 6, height: 4){  
         state "All Ok", label:'${name}', icon:"st.Home.home3", backgroundColor:"#4f9558"
-        state "Water Alert", label:'${name}', icon:"st.alarm.water.wet", backgroundColor:"#007f8f"
-        state "Smoke/CO2 Alert", label:'${name}', icon:"st.alarm.smoke.smoke", backgroundColor:"#711100"
-        state "Intrusion Alert", label:'${name}', icon:"st.alarm.alarm.alarm", backgroundColor:"#8a0707"
+        state "Water Alert", label:'${name}', icon:"st.alarm.water.wet",  action:"offPhysical", backgroundColor:"#007f8f"
+        state "Smoke/CO2 Alert", label:'${name}', icon:"st.alarm.smoke.smoke",  action:"offPhysical", backgroundColor:"#711100"
+        state "Intrusion Alert", label:'${name}', icon:"st.alarm.alarm.alarm",  action:"offPhysical", backgroundColor:"#8a0707"
       }
       
-   
     
      standardTile("armDisarm", "device.armDisarm", width: 2, height: 2) {
 			state "unlite", label: 'Disarmed', backgroundColor: "#ffffff"
